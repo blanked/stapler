@@ -210,29 +210,32 @@ public class LargeText {
         CountingOutputStream os = new CountingOutputStream(out);
 
         Session f = source.open();
-        f.skip(start);
+        try {
+            f.skip(start);
 
-        if(completed) {
-            // write everything till EOF
-            byte[] buf = new byte[1024];
-            int sz;
-            while((sz=f.read(buf))>=0)
-                os.write(buf,0,sz);
-        } else {
-            ByteBuf buf = new ByteBuf(null,f);
-            HeadMark head = new HeadMark(buf);
-            TailMark tail = new TailMark(buf);
-            buf = null;
+            if(completed) {
+                // write everything till EOF
+                byte[] buf = new byte[1024];
+                int sz;
+                while((sz=f.read(buf))>=0)
+                    os.write(buf,0,sz);
+            } else {
+                ByteBuf buf = new ByteBuf(null,f);
+                HeadMark head = new HeadMark(buf);
+                TailMark tail = new TailMark(buf);
+                buf = null;
 
-            int readLines = 0;
-            while(tail.moveToNextLine(f) && readLines++ < MAX_LINES_READ) {
-                head.moveTo(tail,os);
+                int readLines = 0;
+                while(tail.moveToNextLine(f) && readLines++ < MAX_LINES_READ) {
+                    head.moveTo(tail,os);
+                }
+                head.finish(os);
             }
-            head.finish(os);
-        }
 
-        f.close();
-        os.flush();
+        } finally {
+            f.close();
+            os.flush();
+        }
 
         return os.getByteCount()+start;
     }
